@@ -63,16 +63,28 @@ module File_tree = struct
     printf "Root: %s\n" ft.ft_root;
     Array.iter print_item ft.ft_tree
 
+  let _file_tree_magic_string =
+    sprintf "dircmp v %s\nOCaml %s\n" version Sys.ocaml_version
+
   let save_to_file (ft : file_tree list) file =
     let o = open_out file in
+    output_string o _file_tree_magic_string;
     Marshal.to_channel o ft [];
     close_out o
 
   let load_from_file file =
     let i = open_in file in
-    let ft = (Marshal.from_channel i : file_tree list) in
-    close_in i;
-    ft
+    let magick_length = (String.length _file_tree_magic_string) in
+    let s = String.make magick_length '\000' in
+    try
+      ignore (input i s 0 magick_length);
+      if s = _file_tree_magic_string then (
+        let ft = (Marshal.from_channel i : file_tree list) in
+        ft
+      ) else (
+        failwith (sprintf "The header of the file %S is wrong: %S." file s)
+      )
+    with e -> close_in i; raise e
 
   let rec fast_compare_two_items one two =
     match one, two with
