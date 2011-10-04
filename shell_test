@@ -50,11 +50,19 @@ echo ===========================================================================
 echo "dirs 10 10:"
 $DIRCMP -build-tree dir10 -build-tree dir10 -fast-compare
 $DIRCMP -load dir10.dircmp -build-tree dir10 -fast-compare
+$DIRCMP -build-tree dir10 -build-tree dir10 -compare
+$DIRCMP -load dir10.dircmp -build-tree dir10 -compare
 echo "dirs 10 11:"
 $DIRCMP -load dir10-11.dircmp -fast-compare
 $DIRCMP -build-tree dir10 -build-tree dir11 -fast-compare
 $DIRCMP -load dir10.dircmp -build-tree dir11 -fast-compare
+$DIRCMP -load dir10-11.dircmp -compare
+$DIRCMP -build-tree dir10 -build-tree dir11 -compare
+$DIRCMP -load dir10.dircmp -build-tree dir11 -compare
 echo "dirs 10 12:"
 $DIRCMP -load dir10-12.dircmp -fast-compare
 $DIRCMP -build-tree dir10 -build-tree dir12 -fast-compare
 $DIRCMP -load dir10.dircmp -build-tree dir12 -fast-compare
+$DIRCMP -load dir10-12.dircmp -compare
+$DIRCMP -build-tree dir10 -build-tree dir12 -compare
+$DIRCMP -load dir10.dircmp -build-tree dir12 -compare
