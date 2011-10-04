@@ -86,24 +86,31 @@ module File_tree = struct
       )
     with e -> close_in i; raise e
 
-  let rec fast_compare_two_items one two =
-    match one, two with
-    | File (s1, d1, z1), File (s2, d2, z2)
-      when s1 = s2 && d1 = d2 && z1 = z2 -> true
-    | Link s1, Link s2 when s1 = s2 -> true
-    | Dir s1, Dir s2 when s1 = s2 -> true
-    | a, b ->
-      eprintf "Those are different:\n";
-      print_item a;
-      print_item b;
-      false
-
   let rec fast_compare = function
     | [] | _ :: [] -> true
     | h1 :: h2 :: q ->
       compare h1.ft_tree h2.ft_tree = 0
       (* List.for_all2 fast_compare_two_items h1 h2 *)
       && (fast_compare (h2 :: q))
+
+  let compare_two_items one_name one two_name two =
+    match one, two with
+    | File (s1, d1, z1), File (s2, d2, z2)
+      when s1 = s2 && d1 = d2 && z1 = z2 -> ()
+    | Link s1, Link s2 when s1 = s2 -> ()
+    | Dir s1, Dir s2 when s1 = s2 -> ()
+    | a, b ->
+      eprintf "Those two are different:\n  - %s::%s\n  - %s::%s\n"
+        one_name (string_of_item a) two_name (string_of_item b)
+
+  let rec compare = function
+    | [] | _ :: [] -> ()
+    | h1 :: h2 :: q ->
+      Array.iteri (fun i a ->
+        compare_two_items h1.ft_root a h2.ft_root h2.ft_tree.(i)
+      ) h1.ft_tree;
+      compare (h2 :: q)
+
 
 end
 
@@ -118,6 +125,7 @@ let () =
   let input_files = ref [] in
   let print = ref false in
   let do_fast_compare = ref false in
+  let do_compare = ref false in
   let options = [
     ( "-build-tree", 
       Arg.String (add_to_list build_dir_trees),
@@ -132,9 +140,15 @@ let () =
       Arg.Set do_fast_compare,
       "\n\tDo a `fast comparison' of all the built/loaded trees\
         \n\t(will simply tell if they are all equal or not).");
+    ( "-compare",
+      Arg.Set do_compare,
+      "\n\tDo an (experimental) detailed comparison.");
     ( "-print",
       Arg.Set print,
-      " \n\tPrint the built and loaded trees.")
+      " \n\tPrint the built and loaded trees.");
+    ( "-version",
+      Arg.Unit (fun () -> printf "%s\n" version),
+      "\n\tPrint version number on stdout.")
   ] in
   let anon s = eprintf "Do not know what to do with %S\n" s in
   let usage = "dircmp [OPTIONS]" in
@@ -151,5 +165,8 @@ let () =
       printf "[dircmp] Fast compare: Yes, they are all equal.\n"
     else
       printf "[dircmp] Fast compare: No, they are not all equal.\n"
+  );
+  if !do_compare then (
+    File_tree.compare trees
   );
   exit 0
