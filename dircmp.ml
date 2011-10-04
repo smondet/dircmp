@@ -1,5 +1,7 @@
 open Printf
 
+let version = "0"
+
 module File_tree = struct
 
   type file_tree_item = 
