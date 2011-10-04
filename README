@@ -1,0 +1,23 @@
+Directory Comparison
+
+
+** Build:
+  ocamlfind ocamlc -package unix -linkpkg dircmp.ml -o dircmp
+
+** Run:
+
+See `dircmp -help`.
+
+One example:
+
+On machine1:
+  dircmp -build-tree path/to/dir -save-to dir_on_machine1.dircmp
+On machine2:
+  dircmp -build-tree path/to/dir -save-to dir_on_machine2.dircmp
+Move (scp) the .dircmp files to machine3
+  dircmp -load dir_on_machine1.dircmp -load dir_on_machine2.dircmp -fast-compare
+
+
+
+
+
