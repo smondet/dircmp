@@ -120,21 +120,20 @@ let () =
 
   let add_to_list l s = l := !l @ [s] in
 
-  let build_dir_trees = ref [] in
+  let to_build_or_load = ref [] in
   let output_file = ref None in
-  let input_files = ref [] in
   let print = ref false in
   let do_fast_compare = ref false in
   let do_compare = ref false in
   let options = [
     ( "-build-tree", 
-      Arg.String (add_to_list build_dir_trees),
+      Arg.String (fun s -> add_to_list to_build_or_load (`build s)),
       "<path>\n\tBuild a file tree (i.e. the find+md5sum).");
     ( "-save-to",
       Arg.String (set_opt_str output_file),
       "<path>\n\tSave all trees to a file (uses the Marshal module).");
     ( "-load",
-      Arg.String (add_to_list input_files),
+      Arg.String (fun s -> add_to_list to_build_or_load (`load s)),
       "<path>\n\tLoad file trees (coming from a -save-to invocation).");
     ( "-fast-compare",
       Arg.Set do_fast_compare,
@@ -155,9 +154,10 @@ let () =
   Arg.parse options anon usage;
 
   let trees =
-    (List.map File_tree.build !build_dir_trees) @
-      (List.flatten (List.map File_tree.load_from_file !input_files))
-  in
+    List.flatten 
+    (List.map (function
+      | `build b -> [File_tree.build b]
+      | `load l -> File_tree.load_from_file l) !to_build_or_load) in
   if !print then List.iter File_tree.print trees;
   opt_may !output_file (File_tree.save_to_file trees);
   if !do_fast_compare then (
