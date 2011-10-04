@@ -1,0 +1,60 @@
+#! /bin/sh
+
+DIRCMP=$PWD/dircmp
+
+random_file () {
+    head -c 42 /dev/urandom | base64 > $1
+}
+
+
+rm -fr /tmp/dircmptest
+mkdir -p /tmp/dircmptest
+cd /tmp/dircmptest
+
+
+mkdir -p dir10/dir20/dir30
+mkdir -p dir10/dir21/dir30
+mkdir -p dir10/dir22/dir30
+mkdir -p dir10/dir22/dir31
+mkdir -p dir10/dir22/dir32
+
+random_file  dir10/dir20/dir30/file1
+random_file  dir10/dir20/dir30/file2
+random_file  dir10/dir21/dir30/file3
+random_file  dir10/dir22/dir31/file3
+random_file  dir10/dir22/dir31/file4
+random_file  dir10/dir22/dir31/file5
+random_file  dir10/dir22/dir31/file6
+
+echo ================================================================================
+echo $DIRCMP -build-tree dir10 -print
+$DIRCMP -build-tree dir10 -print -save-to dir10.dircmp
+
+cp -r dir10 dir11
+
+echo ================================================================================
+echo $DIRCMP -build-tree dir10 -build-tree dir11 -print
+$DIRCMP -build-tree dir10 -build-tree dir11 -print -save-to dir10-11.dircmp
+
+cp -r dir10 dir12
+random_file  dir12/dir22/dir31/file4
+
+echo ================================================================================
+$DIRCMP -load dir10-11.dircmp -build-tree dir12 -save-to dir10-11-12.dircmp
+$DIRCMP -build-tree dir10 -build-tree dir12 -print -save-to dir10-12.dircmp
+
+echo ================================================================================
+ls -lh *.dircmp
+
+echo ================================================================================
+echo "dirs 10 10:"
+$DIRCMP -build-tree dir10 -build-tree dir10 -fast-compare
+$DIRCMP -load dir10.dircmp -build-tree dir10 -fast-compare
+echo "dirs 10 11:"
+$DIRCMP -load dir10-11.dircmp -fast-compare
+$DIRCMP -build-tree dir10 -build-tree dir11 -fast-compare
+$DIRCMP -load dir10.dircmp -build-tree dir11 -fast-compare
+echo "dirs 10 12:"
+$DIRCMP -load dir10-12.dircmp -fast-compare
+$DIRCMP -build-tree dir10 -build-tree dir12 -fast-compare
+$DIRCMP -load dir10.dircmp -build-tree dir12 -fast-compare
