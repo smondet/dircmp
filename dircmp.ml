@@ -48,20 +48,20 @@ module File_tree = struct
     in
     {ft_root = root; ft_tree = Array.of_list (explore ".")}
 
-  let print_item ft =
+  let string_of_item ft =
     match ft with 
-    | Dir s -> printf "Dir: %s\n" s
-    | File (s, d, z) -> printf "File: %s (%d Bytes; MD5: %s)\n" s z (Digest.to_hex d)
-    | Link s -> printf "Link %s\n" s
-    | Error (s, m) -> printf "Error: %s\n" m
+    | Dir s -> sprintf "Dir: %s" s
+    | File (s, d, z) -> sprintf "File: %s (%d Bytes; MD5: %s)" s z (Digest.to_hex d)
+    | Link s -> sprintf "Link %s" s
+    | Error (s, m) -> sprintf "Error: %s" m
     | Char   path 
     | Block  path
     | Pipe   path
-    | Socket path -> printf "Other stuff: %s\n" path
+    | Socket path -> sprintf "Other stuff: %s" path
       
   let print ft =
     printf "Root: %s\n" ft.ft_root;
-    Array.iter print_item ft.ft_tree
+    Array.iter (fun i -> printf "  %s\n" (string_of_item i)) ft.ft_tree
 
   let _file_tree_magic_string =
     sprintf "dircmp v %s\nOCaml %s\n" version Sys.ocaml_version
