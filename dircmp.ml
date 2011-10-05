@@ -18,11 +18,12 @@ module File_tree = struct
     ft_tree: file_tree_item array;
   }
 
-  let build root =
+  let build ?(forget_specials=false) root =
     let ls dir =
       let sort a = Array.fast_sort String.compare a; a in
       let dir_read = Sys.readdir (root ^ "/" ^ dir) in
       Array.to_list (Array.map (fun f -> dir ^ "/" ^ f) (sort dir_read)) in
+    let special = if forget_specials then (fun _ -> []) else (fun s -> [s]) in
     let rec explore path =
       try 
         let real_path = (root ^ "/" ^ path) in
@@ -33,18 +34,18 @@ module File_tree = struct
         | Unix.S_DIR -> 
           Dir path ::
             (List.flatten (List.map explore (ls path)))
-        | Unix.S_CHR  -> [Char   path] 
-	| Unix.S_BLK  -> [Block	 path] 
-	| Unix.S_FIFO -> [Pipe	 path] 
-	| Unix.S_SOCK -> [Socket path] 
+        | Unix.S_CHR  -> special (Char	 path) 
+	| Unix.S_BLK  -> special (Block	 path) 
+	| Unix.S_FIFO -> special (Pipe	 path) 
+	| Unix.S_SOCK -> special (Socket path) 
       with
       | Sys_error msg ->
-          eprintf "Warning: Ignoring path %s (%s)\n" path msg;
-          [Error (path, msg)]
+        eprintf "Warning: Ignoring path %s (%s)\n" path msg;
+        special (Error (path, msg))
       | Unix.Unix_error (e, _, _) ->
         let msg = Unix.error_message e in
         eprintf "Warning: Ignoring path %s (%s)\n" path msg;
-        [Error (path, msg)]
+        special (Error (path, msg))
     in
     {ft_root = root; ft_tree = Array.of_list (explore ".")}
 
@@ -125,10 +126,15 @@ let () =
   let print = ref false in
   let do_fast_compare = ref false in
   let do_compare = ref false in
+  let forget_specials = ref false in
   let options = [
     ( "-build-tree", 
       Arg.String (fun s -> add_to_list to_build_or_load (`build s)),
       "<path>\n\tBuild a file tree (i.e. the find+md5sum).");
+    ( "-forget-specials",
+      Arg.Set forget_specials,
+      "\n\tDo not keep track of “special” files and errors while building trees \
+       \n\t(i.e. keep only regular files, symbolic links, and directories).");
     ( "-save-to",
       Arg.String (set_opt_str output_file),
       "<path>\n\tSave all trees to a file (uses the Marshal module).");
@@ -156,7 +162,7 @@ let () =
   let trees =
     List.flatten 
     (List.map (function
-      | `build b -> [File_tree.build b]
+      | `build b -> [File_tree.build ~forget_specials:!forget_specials b]
       | `load l -> File_tree.load_from_file l) !to_build_or_load) in
   if !print then List.iter File_tree.print trees;
   opt_may !output_file (File_tree.save_to_file trees);
