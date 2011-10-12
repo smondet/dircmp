@@ -14,10 +14,6 @@ module File_tree = struct
     | Pipe of string     (* Named pipe	*)   
     | Socket of string   (* Socket	*)   	 
     | Error of string * string
-  type file_tree = {
-    ft_root: string;
-    ft_tree: file_tree_item array;
-  }
 
   let descend ?(forget_specials=false) ~actions root =
     let ls dir =
@@ -96,31 +92,9 @@ module File_tree = struct
       )
     with e -> close_in i; raise e
 
-(*
-
-  let compare_two_items one_name one two_name two =
-    match one, two with
-    | File (s1, d1), File (s2, d2) when s1 = s2 && d1 = d2 -> ()
-    | Link s1, Link s2 when s1 = s2 -> ()
-    | Dir s1, Dir s2 when s1 = s2 -> ()
-    | a, b ->
-      eprintf "Those two are different:\n  - %s::%s\n  - %s::%s\n"
-        one_name (string_of_item a) two_name (string_of_item b)
-
-  let rec compare = function
-    | [] | _ :: [] -> ()
-    | h1 :: h2 :: q ->
-      Array.iteri (fun i a ->
-        compare_two_items h1.ft_root a h2.ft_root h2.ft_tree.(i)
-      ) h1.ft_tree;
-      compare (h2 :: q)
-*)
-
 end
 
 let () =
-(*  let set_opt_str o s = o := Some s in
-  let opt_may o f = match o with None -> () | Some s -> f s in *)
 
   let add_to_list l s = l := !l @ [s] in
 
@@ -130,25 +104,17 @@ let () =
   let options = [
     ( "-parse-tree", 
       Arg.String (fun s -> add_to_list to_parse_or_load (`parse s)),
-      "<path>\n\tDescend a file tree (i.e. the find+md5sum).");
+      "<path>\n\tDescend a file tree.");
     ( "-forget-specials",
       Arg.Set forget_specials,
-      "\n\tDo not keep track of “special” files and errors while building trees \
-       \n\t(i.e. keep only regular files, symbolic links, and directories).");
+      "\n\tDo not keep track of “special” files and errors while parsing trees \
+       \n\t(i.e. look only at regular files, symbolic links, and directories).");
     ( "-save-to",
       Arg.String (fun s -> add_to_list to_do (`save s)),
       "<path>\n\tSave all trees to a file (uses the Marshal module).");
     ( "-load",
       Arg.String (fun s -> add_to_list to_parse_or_load (`load s)),
       "<path>\n\tLoad file trees (coming from a -save-to invocation).");
-(*    ( "-fast-compare",
-      Arg.Set do_fast_compare,
-      "\n\tDo a `fast comparison' of all the built/loaded trees\
-        \n\t(will simply tell if they are all equal or not).");
-    ( "-compare",
-      Arg.Set do_compare,
-      "\n\tDo an (experimental) detailed comparison.");
- *)
     ( "-print",
       Arg.Unit (fun () -> add_to_list to_do `print),
       " \n\tPrint the parsed and loaded trees to standard output.");
@@ -164,7 +130,7 @@ let () =
   Arg.parse options anon usage;
 
   let actions =
-    List.rev_map (function
+    List.map (function
       | `print -> File_tree.print stdout
       | `print_to path ->
         let out = open_out path in
@@ -182,21 +148,4 @@ let () =
       File_tree.load ~actions path
   ) !to_parse_or_load;
 
-(*
-  let trees =
-    List.flatten 
-    (List.map (function
-      | `build b -> [File_tree.build ~forget_specials:!forget_specials b]
-      | `load l -> File_tree.load_from_file l) !to_build_or_load) in
-  if !print then List.iter File_tree.print trees;
-  opt_may !output_file (File_tree.save_to_file trees);
-  if !do_fast_compare then (
-    if File_tree.fast_compare trees then
-      printf "[dircmp] Fast compare: Yes, they are all equal.\n"
-    else
-      printf "[dircmp] Fast compare: No, they are not all equal.\n"
-  );
-  if !do_compare then (
-    File_tree.compare trees
-  ); *)
   exit 0
