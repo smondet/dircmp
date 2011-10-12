@@ -68,36 +68,36 @@ module File_tree = struct
   let print ?(indent=0) item =
     let strindent = String.make indent ' ' in
     printf "%s%s\n" strindent (string_of_item item)
-(*
+
   let _file_tree_magic_string =
     sprintf "dircmp v %s\nOCaml %s\n" version Sys.ocaml_version
 
-  let save_to_file (ft : file_tree list) file =
-    let o = open_out file in
+  let file_saver path =
+    let o = open_out path in
     output_string o _file_tree_magic_string;
-    Marshal.to_channel o ft [];
-    close_out o
+    let action = fun (item: file_tree_item) -> Marshal.to_channel o item [] in
+    let at_exit = fun () -> close_out o in
+    (action, at_exit)
 
-  let load_from_file file =
+  let load ~actions file =
+    let do_actions o = List.iter (fun f -> f o) actions in
     let i = open_in file in
     let magick_length = (String.length _file_tree_magic_string) in
     let s = String.make magick_length '\000' in
     try
       ignore (input i s 0 magick_length);
       if s = _file_tree_magic_string then (
-        let ft = (Marshal.from_channel i : file_tree list) in
-        ft
+        try 
+          while true do
+            do_actions (Marshal.from_channel i : file_tree_item)
+          done
+        with End_of_file -> ()
       ) else (
         failwith (sprintf "The header of the file %S is wrong: %S." file s)
       )
     with e -> close_in i; raise e
 
-  let rec fast_compare = function
-    | [] | _ :: [] -> true
-    | h1 :: h2 :: q ->
-      compare h1.ft_tree h2.ft_tree = 0
-      (* List.for_all2 fast_compare_two_items h1 h2 *)
-      && (fast_compare (h2 :: q))
+(*
 
   let compare_two_items one_name one two_name two =
     match one, two with
@@ -136,13 +136,13 @@ let () =
       Arg.Set forget_specials,
       "\n\tDo not keep track of “special” files and errors while building trees \
        \n\t(i.e. keep only regular files, symbolic links, and directories).");
- (*   ( "-save-to",
-      Arg.String (set_opt_str output_file),
+    ( "-save-to",
+      Arg.String (fun s -> add_to_list to_do (`save s)),
       "<path>\n\tSave all trees to a file (uses the Marshal module).");
     ( "-load",
-      Arg.String (fun s -> add_to_list to_build_or_load (`load s)),
+      Arg.String (fun s -> add_to_list to_parse_or_load (`load s)),
       "<path>\n\tLoad file trees (coming from a -save-to invocation).");
-    ( "-fast-compare",
+(*    ( "-fast-compare",
       Arg.Set do_fast_compare,
       "\n\tDo a `fast comparison' of all the built/loaded trees\
         \n\t(will simply tell if they are all equal or not).");
@@ -161,10 +161,18 @@ let () =
   Arg.parse options anon usage;
 
   let actions =
-    List.rev_map (function | `print -> File_tree.print ~indent:0) !to_do in
+    List.rev_map (function
+      | `print -> File_tree.print ~indent:0
+      | `save path -> 
+        let action, to_do_at_exit = File_tree.file_saver path in
+        at_exit to_do_at_exit;
+        action
+    ) !to_do in
   List.iter (function
     | `parse path ->
       File_tree.descend ~forget_specials:!forget_specials ~actions path
+    | `load path ->
+      File_tree.load ~actions path
   ) !to_parse_or_load;
 
 (*
