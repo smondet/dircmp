@@ -19,7 +19,12 @@ Move (scp) the .dircmp files to machine3
 
 (The extension if now important for diffing)
 
+Another example:
 
+  dircmp digest -parse-tree path/to/dir1 -print-to dir1.txt
+  dircmp digest -parse-tree path/to/dir1 -print-to dir2.txt
+
+  diff dir1.txt dir2.txt
 
 
 
