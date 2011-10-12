@@ -16,5 +16,11 @@ $TIME find $BENCH_DIR -type f -exec md5sum {} \; > /tmp/benchfindmd5
 echo "Dircmp"
 $TIME dircmp digest -parse-tree $BENCH_DIR -save-to /tmp/benchdircmp
 
+echo "Dircmp -do-not-read-links"
+$TIME dircmp digest -do-not-read-links -parse-tree $BENCH_DIR -save-to /tmp/benchdircmpnolinks
+
+echo "Dircmp -do-not-read-links -forget-specials"
+$TIME dircmp digest -do-not-read-links -forget-specials -parse-tree $BENCH_DIR -save-to /tmp/benchdircmpnolinksnospec
+
 ls -lh /tmp/bench*
 
