@@ -14,7 +14,7 @@ echo "Find  + md5sum"
 $TIME find $BENCH_DIR -type f -exec md5sum {} \; > /tmp/benchfindmd5
 
 echo "Dircmp"
-$TIME dircmp -build-tree $BENCH_DIR -save-to /tmp/benchdircmp
+$TIME dircmp digest -parse-tree $BENCH_DIR -save-to /tmp/benchdircmp
 
 ls -lh /tmp/bench*
 
