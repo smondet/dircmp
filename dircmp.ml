@@ -6,7 +6,7 @@ module File_tree = struct
 
   type file_tree_item = 
     | Dir of string
-    | File of string * Digest.t * int
+    | File of string * Digest.t
     | Link of string
     | Char of string     (* Character device *) 
     | Block of string    (* Block device	*)	   
@@ -26,10 +26,11 @@ module File_tree = struct
     let special = if forget_specials then (fun _ -> []) else (fun s -> [s]) in
     let rec explore path =
       try 
+        let module ULF = Unix.LargeFile in
         let real_path = (root ^ "/" ^ path) in
-        let lstat = Unix.lstat real_path in
-        match lstat.Unix.st_kind with
-        | Unix.S_REG -> [File (path, Digest.file real_path, lstat.Unix.st_size)]
+        let lstat = ULF.lstat real_path in
+        match lstat.ULF.st_kind with
+        | Unix.S_REG -> [File (path, Digest.file real_path)]
         | Unix.S_LNK -> [Link path]
         | Unix.S_DIR -> 
           Dir path ::
@@ -52,7 +53,7 @@ module File_tree = struct
   let string_of_item ft =
     match ft with 
     | Dir s -> sprintf "Dir: %s" s
-    | File (s, d, z) -> sprintf "File: %s (%d Bytes; MD5: %s)" s z (Digest.to_hex d)
+    | File (s, d) -> sprintf "File: %s (MD5: %s)" s (Digest.to_hex d)
     | Link s -> sprintf "Link %s" s
     | Error (s, m) -> sprintf "Error: %s" m
     | Char   path 
@@ -96,8 +97,7 @@ module File_tree = struct
 
   let compare_two_items one_name one two_name two =
     match one, two with
-    | File (s1, d1, z1), File (s2, d2, z2)
-      when s1 = s2 && d1 = d2 && z1 = z2 -> ()
+    | File (s1, d1), File (s2, d2) when s1 = s2 && d1 = d2 -> ()
     | Link s1, Link s2 when s1 = s2 -> ()
     | Dir s1, Dir s2 when s1 = s2 -> ()
     | a, b ->
