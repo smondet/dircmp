@@ -6,16 +6,18 @@ Directory Comparison
 
 ** Run:
 
-See `dircmp -help`.
+See “dircmp help”, and then “dircmp <command> -help”.
 
 One example:
 
 On machine1:
-  dircmp -build-tree path/to/dir -save-to dir_on_machine1.dircmp
+  dircmp digest -parse-tree path/to/dir -save-to dir_on_machine1.dircmp
 On machine2:
-  dircmp -build-tree path/to/dir -save-to dir_on_machine2.dircmp
+  dircmp digest -parse-tree path/to/dir -save-to dir_on_machine2.dircmp
 Move (scp) the .dircmp files to machine3
-  dircmp -load dir_on_machine1.dircmp -load dir_on_machine2.dircmp -fast-compare
+  dircmp diff dir_on_machine1.dircmp dir_on_machine2.dircmp
+
+(The extension if now important for diffing)
 
 
 
