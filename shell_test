@@ -28,41 +28,30 @@ random_file  dir10/dir22/dir31/file6
 
 echo ================================================================================
 echo $DIRCMP -build-tree dir10 -print
-$DIRCMP -build-tree dir10 -print -save-to dir10.dircmp
+$DIRCMP digest -parse-tree dir10 -print -save-to dir10.dircmp
 
 cp -r dir10 dir11
 
 echo ================================================================================
 echo $DIRCMP -build-tree dir10 -build-tree dir11 -print
-$DIRCMP -build-tree dir10 -build-tree dir11 -print -save-to dir10-11.dircmp
+$DIRCMP digest -parse-tree dir10 -parse-tree dir11 -print -save-to dir10-11.dircmp
 
 cp -r dir10 dir12
 random_file  dir12/dir22/dir31/file4
 
 echo ================================================================================
-$DIRCMP -load dir10-11.dircmp -build-tree dir12 -save-to dir10-11-12.dircmp
-$DIRCMP -build-tree dir10 -build-tree dir12 -print -save-to dir10-12.dircmp
+$DIRCMP digest -load dir10-11.dircmp -parse-tree dir12 -save-to dir10-11-12.dircmp
+$DIRCMP digest -parse-tree dir10 -parse-tree dir12 -print -save-to dir10-12.dircmp
 
 echo ================================================================================
 ls -lh *.dircmp
 
 echo ================================================================================
 echo "dirs 10 10:"
-$DIRCMP -build-tree dir10 -build-tree dir10 -fast-compare
-$DIRCMP -load dir10.dircmp -build-tree dir10 -fast-compare
-$DIRCMP -build-tree dir10 -build-tree dir10 -compare
-$DIRCMP -load dir10.dircmp -build-tree dir10 -compare
+$DIRCMP diff  dir10.dircmp  dir10.dircmp
 echo "dirs 10 11:"
-$DIRCMP -load dir10-11.dircmp -fast-compare
-$DIRCMP -build-tree dir10 -build-tree dir11 -fast-compare
-$DIRCMP -load dir10.dircmp -build-tree dir11 -fast-compare
-$DIRCMP -load dir10-11.dircmp -compare
-$DIRCMP -build-tree dir10 -build-tree dir11 -compare
-$DIRCMP -load dir10.dircmp -build-tree dir11 -compare
+$DIRCMP digest -parse-tree dir11 -print-to dir11.txt 
+$DIRCMP diff dir10.dircmp dir11.txt
 echo "dirs 10 12:"
-$DIRCMP -load dir10-12.dircmp -fast-compare
-$DIRCMP -build-tree dir10 -build-tree dir12 -fast-compare
-$DIRCMP -load dir10.dircmp -build-tree dir12 -fast-compare
-$DIRCMP -load dir10-12.dircmp -compare
-$DIRCMP -build-tree dir10 -build-tree dir12 -compare
-$DIRCMP -load dir10.dircmp -build-tree dir12 -compare
+$DIRCMP digest -parse-tree dir12 -save-to dir12.dircmp 
+$DIRCMP diff dir10.dircmp dir12.dircmp
