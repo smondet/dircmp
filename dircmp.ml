@@ -8,14 +8,14 @@ module File_tree = struct
     | Root of string
     | Dir of string
     | File of string * Digest.t
-    | Link of string * string
+    | Link of string * string option
     | Char of string     (* Character device *) 
     | Block of string    (* Block device	*)	   
     | Pipe of string     (* Named pipe	*)   
     | Socket of string   (* Socket	*)   	 
     | Error of string * string
 
-  let descend ?(forget_specials=false) ~actions root =
+  let descend ?(forget_specials=false) ?(read_links=true) ~actions root =
     let ls dir =
       let sort a = Array.fast_sort String.compare a; a in
       let dir_read = Sys.readdir (root ^ "/" ^ dir) in
@@ -30,7 +30,10 @@ module File_tree = struct
         let lstat = ULF.lstat real_path in
         match lstat.ULF.st_kind with
         | Unix.S_REG -> do_actions (File (path, Digest.file real_path))
-        | Unix.S_LNK -> do_actions (Link (path, Unix.readlink real_path)) 
+        | Unix.S_LNK -> 
+          do_actions (Link (path,
+                            if read_links then 
+                              Some (Unix.readlink real_path) else None))
         | Unix.S_DIR ->
           (do_actions (Dir path); (Array.iter explore (ls path)))
         | Unix.S_CHR  -> do_special (Char path) 
@@ -54,7 +57,9 @@ module File_tree = struct
     | Root s -> sprintf "Root %s" s
     | Dir s -> sprintf "Dir %s" s
     | File (s, d) -> sprintf "File %s MD5:%s" s (Digest.to_hex d)
-    | Link (s, d) -> sprintf "Link %s -> %s" s d
+    | Link (s, d) -> 
+      sprintf "Link %s%s" s
+        (match d with None -> "" | Some s -> sprintf " -> %s" s)
     | Error (s, m) -> sprintf "Error %s" m
     | Char   path 
     | Block  path
@@ -101,14 +106,11 @@ let digest () =
   let to_parse_or_load = ref [] in
   let to_do = ref [] in
   let forget_specials = ref false in
+  let read_links = ref true in
   let options = [
     ( "-parse-tree", 
       Arg.String (fun s -> add_to_list to_parse_or_load (`parse s)),
       "<path>\n\tDescend a file tree.");
-    ( "-forget-specials",
-      Arg.Set forget_specials,
-      "\n\tDo not keep track of “special” files and errors while parsing trees \
-       \n\t(i.e. look only at regular files, symbolic links, and directories).");
     ( "-save-to",
       Arg.String (fun s -> add_to_list to_do (`save s)),
       "<path>\n\tSave all trees to a file (uses the Marshal module).");
@@ -121,6 +123,13 @@ let digest () =
     ( "-print-to",
       Arg.String (fun path -> add_to_list to_do (`print_to path)),
       "<path>\n\tPrint the parsed and loaded trees to a file.");
+    ( "-forget-specials",
+      Arg.Set forget_specials,
+      "\n\tDo not keep track of “special” files and errors while parsing trees \
+       \n\t(i.e. look only at regular files, symbolic links, and directories).");
+    ( "-do-not-read-links",
+      Arg.Clear read_links,
+      "\n\tDo not track where the symbolic links point to.");
     ( "-version",
       Arg.Unit (fun () -> printf "%s\n" version),
       (sprintf "\n\tPrint version number on stdout (i.e. print %S)." version))
@@ -143,7 +152,8 @@ let digest () =
     ) !to_do in
   List.iter (function
     | `parse path ->
-      File_tree.descend ~forget_specials:!forget_specials ~actions path
+      File_tree.descend ~forget_specials:!forget_specials 
+        ~read_links:!read_links ~actions path
     | `load path ->
       File_tree.load ~actions path
   ) !to_parse_or_load;
