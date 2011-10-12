@@ -30,7 +30,7 @@ module File_tree = struct
         let lstat = ULF.lstat real_path in
         match lstat.ULF.st_kind with
         | Unix.S_REG -> do_actions (File (path, Digest.file real_path))
-        | Unix.S_LNK -> do_actions (Link (path, Unix.readlink path))
+        | Unix.S_LNK -> do_actions (Link (path, Unix.readlink real_path)) 
         | Unix.S_DIR ->
           (do_actions (Dir path); (Array.iter explore (ls path)))
         | Unix.S_CHR  -> do_special (Char path) 
