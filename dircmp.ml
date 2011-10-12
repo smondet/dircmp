@@ -65,9 +65,8 @@ module File_tree = struct
     | Pipe   path
     | Socket path -> sprintf "Other stuff %s" path
       
-  let print ?(indent=0) item =
-    let strindent = String.make indent ' ' in
-    printf "%s%s\n" strindent (string_of_item item)
+  let print item =
+    printf "%s\n" (string_of_item item)
 
   let _file_tree_magic_string =
     sprintf "dircmp v %s\nOCaml %s\n" version Sys.ocaml_version
@@ -162,7 +161,7 @@ let () =
 
   let actions =
     List.rev_map (function
-      | `print -> File_tree.print ~indent:0
+      | `print -> File_tree.print
       | `save path -> 
         let action, to_do_at_exit = File_tree.file_saver path in
         at_exit to_do_at_exit;
