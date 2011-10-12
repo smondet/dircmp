@@ -4,7 +4,8 @@ let version = "0+s"
 
 module File_tree = struct
 
-  type file_tree_item = 
+  type file_tree_item =
+    | Root of string
     | Dir of string
     | File of string * Digest.t
     | Link of string
@@ -18,53 +19,56 @@ module File_tree = struct
     ft_tree: file_tree_item array;
   }
 
-  let build ?(forget_specials=false) root =
+  let descend ?(forget_specials=false) ~actions root =
     let ls dir =
       let sort a = Array.fast_sort String.compare a; a in
       let dir_read = Sys.readdir (root ^ "/" ^ dir) in
-      Array.to_list (Array.map (fun f -> dir ^ "/" ^ f) (sort dir_read)) in
-    let special = if forget_specials then (fun _ -> []) else (fun s -> [s]) in
+      (Array.map (fun f -> dir ^ "/" ^ f) (sort dir_read)) in
+
+    let do_actions o = List.iter (fun f -> f o) actions in
+    let do_special o = if forget_specials then () else (do_actions o) in
     let rec explore path =
       try 
         let module ULF = Unix.LargeFile in
         let real_path = (root ^ "/" ^ path) in
         let lstat = ULF.lstat real_path in
         match lstat.ULF.st_kind with
-        | Unix.S_REG -> [File (path, Digest.file real_path)]
-        | Unix.S_LNK -> [Link path]
-        | Unix.S_DIR -> 
-          Dir path ::
-            (List.flatten (List.map explore (ls path)))
-        | Unix.S_CHR  -> special (Char	 path) 
-	| Unix.S_BLK  -> special (Block	 path) 
-	| Unix.S_FIFO -> special (Pipe	 path) 
-	| Unix.S_SOCK -> special (Socket path) 
+        | Unix.S_REG -> do_actions (File (path, Digest.file real_path))
+        | Unix.S_LNK -> do_actions (Link path)
+        | Unix.S_DIR ->
+          (do_actions (Dir path); (Array.iter explore (ls path)))
+        | Unix.S_CHR  -> do_special (Char path) 
+	| Unix.S_BLK  -> do_special (Block path) 
+	| Unix.S_FIFO -> do_special (Pipe path) 
+	| Unix.S_SOCK -> do_special (Socket path) 
       with
       | Sys_error msg ->
         eprintf "Warning: Ignoring path %s (%s)\n" path msg;
-        special (Error (path, msg))
+        do_special (Error (path, msg))
       | Unix.Unix_error (e, _, _) ->
         let msg = Unix.error_message e in
         eprintf "Warning: Ignoring path %s (%s)\n" path msg;
-        special (Error (path, msg))
+        do_special (Error (path, msg))
     in
-    {ft_root = root; ft_tree = Array.of_list (explore ".")}
+    do_actions (Root root);
+    explore "."
 
   let string_of_item ft =
     match ft with 
-    | Dir s -> sprintf "Dir: %s" s
-    | File (s, d) -> sprintf "File: %s (MD5: %s)" s (Digest.to_hex d)
+    | Root s -> sprintf "Root %s" s
+    | Dir s -> sprintf "Dir %s" s
+    | File (s, d) -> sprintf "File %s MD5:%s" s (Digest.to_hex d)
     | Link s -> sprintf "Link %s" s
-    | Error (s, m) -> sprintf "Error: %s" m
+    | Error (s, m) -> sprintf "Error %s" m
     | Char   path 
     | Block  path
     | Pipe   path
-    | Socket path -> sprintf "Other stuff: %s" path
+    | Socket path -> sprintf "Other stuff %s" path
       
-  let print ft =
-    printf "Root: %s\n" ft.ft_root;
-    Array.iter (fun i -> printf "  %s\n" (string_of_item i)) ft.ft_tree
-
+  let print ?(indent=0) item =
+    let strindent = String.make indent ' ' in
+    printf "%s%s\n" strindent (string_of_item item)
+(*
   let _file_tree_magic_string =
     sprintf "dircmp v %s\nOCaml %s\n" version Sys.ocaml_version
 
@@ -111,31 +115,28 @@ module File_tree = struct
         compare_two_items h1.ft_root a h2.ft_root h2.ft_tree.(i)
       ) h1.ft_tree;
       compare (h2 :: q)
-
+*)
 
 end
 
 let () =
-  let set_opt_str o s = o := Some s in
-  let opt_may o f = match o with None -> () | Some s -> f s in
+(*  let set_opt_str o s = o := Some s in
+  let opt_may o f = match o with None -> () | Some s -> f s in *)
 
   let add_to_list l s = l := !l @ [s] in
 
-  let to_build_or_load = ref [] in
-  let output_file = ref None in
-  let print = ref false in
-  let do_fast_compare = ref false in
-  let do_compare = ref false in
+  let to_parse_or_load = ref [] in
+  let to_do = ref [] in
   let forget_specials = ref false in
   let options = [
-    ( "-build-tree", 
-      Arg.String (fun s -> add_to_list to_build_or_load (`build s)),
-      "<path>\n\tBuild a file tree (i.e. the find+md5sum).");
+    ( "-parse-tree", 
+      Arg.String (fun s -> add_to_list to_parse_or_load (`parse s)),
+      "<path>\n\tDescend a file tree (i.e. the find+md5sum).");
     ( "-forget-specials",
       Arg.Set forget_specials,
       "\n\tDo not keep track of “special” files and errors while building trees \
        \n\t(i.e. keep only regular files, symbolic links, and directories).");
-    ( "-save-to",
+ (*   ( "-save-to",
       Arg.String (set_opt_str output_file),
       "<path>\n\tSave all trees to a file (uses the Marshal module).");
     ( "-load",
@@ -148,17 +149,25 @@ let () =
     ( "-compare",
       Arg.Set do_compare,
       "\n\tDo an (experimental) detailed comparison.");
-    ( "-print",
-      Arg.Set print,
-      " \n\tPrint the built and loaded trees.");
+ *)    ( "-print",
+      Arg.Unit (fun () -> add_to_list to_do `print),
+      " \n\tPrint the parsed and loaded trees.");
     ( "-version",
       Arg.Unit (fun () -> printf "%s\n" version),
-      "\n\tPrint version number on stdout.")
+      (sprintf "\n\tPrint version number on stdout (i.e. print %S)." version))
   ] in
   let anon s = eprintf "Do not know what to do with %S\n" s in
   let usage = "dircmp [OPTIONS]" in
   Arg.parse options anon usage;
 
+  let actions =
+    List.rev_map (function | `print -> File_tree.print ~indent:0) !to_do in
+  List.iter (function
+    | `parse path ->
+      File_tree.descend ~forget_specials:!forget_specials ~actions path
+  ) !to_parse_or_load;
+
+(*
   let trees =
     List.flatten 
     (List.map (function
@@ -174,5 +183,5 @@ let () =
   );
   if !do_compare then (
     File_tree.compare trees
-  );
+  ); *)
   exit 0
