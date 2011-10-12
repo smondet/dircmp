@@ -65,8 +65,8 @@ module File_tree = struct
     | Pipe   path
     | Socket path -> sprintf "Other stuff %s" path
       
-  let print item =
-    printf "%s\n" (string_of_item item)
+  let print out item =
+    fprintf out "%s\n" (string_of_item item)
 
   let _file_tree_magic_string =
     sprintf "dircmp v %s\nOCaml %s\n" version Sys.ocaml_version
@@ -148,9 +148,13 @@ let () =
     ( "-compare",
       Arg.Set do_compare,
       "\n\tDo an (experimental) detailed comparison.");
- *)    ( "-print",
+ *)
+    ( "-print",
       Arg.Unit (fun () -> add_to_list to_do `print),
-      " \n\tPrint the parsed and loaded trees.");
+      " \n\tPrint the parsed and loaded trees to standard output.");
+    ( "-print-to",
+      Arg.String (fun path -> add_to_list to_do (`print_to path)),
+      "<path>\n\tPrint the parsed and loaded trees to a file.");
     ( "-version",
       Arg.Unit (fun () -> printf "%s\n" version),
       (sprintf "\n\tPrint version number on stdout (i.e. print %S)." version))
@@ -161,7 +165,11 @@ let () =
 
   let actions =
     List.rev_map (function
-      | `print -> File_tree.print
+      | `print -> File_tree.print stdout
+      | `print_to path ->
+        let out = open_out path in
+        at_exit (fun () -> close_out out);
+        File_tree.print out
       | `save path -> 
         let action, to_do_at_exit = File_tree.file_saver path in
         at_exit to_do_at_exit;
