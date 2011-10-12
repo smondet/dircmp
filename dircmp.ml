@@ -8,7 +8,7 @@ module File_tree = struct
     | Root of string
     | Dir of string
     | File of string * Digest.t
-    | Link of string
+    | Link of string * string
     | Char of string     (* Character device *) 
     | Block of string    (* Block device	*)	   
     | Pipe of string     (* Named pipe	*)   
@@ -34,7 +34,7 @@ module File_tree = struct
         let lstat = ULF.lstat real_path in
         match lstat.ULF.st_kind with
         | Unix.S_REG -> do_actions (File (path, Digest.file real_path))
-        | Unix.S_LNK -> do_actions (Link path)
+        | Unix.S_LNK -> do_actions (Link (path, Unix.readlink path))
         | Unix.S_DIR ->
           (do_actions (Dir path); (Array.iter explore (ls path)))
         | Unix.S_CHR  -> do_special (Char path) 
@@ -58,7 +58,7 @@ module File_tree = struct
     | Root s -> sprintf "Root %s" s
     | Dir s -> sprintf "Dir %s" s
     | File (s, d) -> sprintf "File %s MD5:%s" s (Digest.to_hex d)
-    | Link s -> sprintf "Link %s" s
+    | Link (s, d) -> sprintf "Link %s -> %s" s d
     | Error (s, m) -> sprintf "Error %s" m
     | Char   path 
     | Block  path
