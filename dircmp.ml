@@ -1,6 +1,6 @@
 open Printf
 
-let version = "0"
+let version = "0+s"
 
 module File_tree = struct
 
