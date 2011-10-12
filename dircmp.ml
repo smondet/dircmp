@@ -94,7 +94,7 @@ module File_tree = struct
 
 end
 
-let () =
+let digest () =
 
   let add_to_list l s = l := !l @ [s] in
 
@@ -149,3 +149,29 @@ let () =
   ) !to_parse_or_load;
 
   exit 0
+
+
+let () =
+  let usage = "usage: dircmp {version,help,digest,diff} [OPTIONS]" in
+  if Array.length Sys.argv < 2 then (
+    eprintf "%s\n" usage;
+    exit 1
+  ) else (
+    match Sys.argv.(1) with
+    | "digest" -> 
+      Arg.current := 1;
+      digest ()
+    | "diff" ->
+      eprintf "NOT IMPLEMENTED\n";
+      exit 0
+    | "help" | "-help" | "-h" | "--help" ->
+      eprintf "%s\n" usage;
+      exit 0
+    | "version" | "-version" | "-v" | "--version" ->
+      eprintf "Dircmp v. %s\n" version;
+      exit 0
+    | s -> 
+      eprintf "unknown command %S\n%s\n" s usage;
+      exit 1
+  )
+
