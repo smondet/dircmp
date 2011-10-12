@@ -126,7 +126,7 @@ let digest () =
       (sprintf "\n\tPrint version number on stdout (i.e. print %S)." version))
   ] in
   let anon s = eprintf "Do not know what to do with %S\n" s in
-  let usage = "dircmp [OPTIONS]" in
+  let usage = "dircmp digest [OPTIONS]" in
   Arg.parse options anon usage;
 
   let actions =
@@ -150,6 +150,58 @@ let digest () =
 
   exit 0
 
+let diff () =
+
+  let tmp_dir = ref None in
+  let diff_cmd = ref "diff" in
+  let options = [
+    ("-tmp-dir",
+     Arg.String (fun s -> tmp_dir := Some s),
+     sprintf "<path>\n\tSet the temporary directory (default %S)." 
+       Filename.temp_dir_name);
+    ("-diff-cmd",
+     Arg.Set_string diff_cmd,
+     sprintf "<path>\n\tSet the command used for “diff” (default %S)."
+       !diff_cmd);
+  ] in
+  let left_right = ref [] in
+  let anon s = left_right := s :: !left_right in
+  let usage = "dircmp diff [OPTIONS] left.{dircmp,txt} right.{dircmp,txt}" in
+  Arg.parse options anon usage;
+
+  let transform_dircmp f =
+    let tmp =
+      Filename.temp_file ?temp_dir:!tmp_dir "dircmpdiff" ".txt" in
+    let out = open_out tmp in
+    let actions = [ File_tree.print out ] in
+    File_tree.load ~actions f;
+    close_out out;
+    tmp in
+
+  let text_version f =
+    if Filename.check_suffix f ".dircmp" then
+      transform_dircmp f
+    else
+      f in
+
+  begin match !left_right with
+  | [ left; right ] ->
+    let txt_left = text_version left in
+    let txt_right = text_version right in
+    let open Unix in    
+    begin match system (sprintf "%s %s %s" !diff_cmd txt_left txt_right) with
+    | WEXITED 127 -> 
+      eprintf "The result WEXITED 127 indicates that the shell couldn't be executed."
+    | WEXITED 0 -> ()
+    | WEXITED n -> eprintf "%s returned %d\n" !diff_cmd n
+    | WSIGNALED n -> eprintf "%s was killed by signal %d\n" !diff_cmd n
+    | WSTOPPED n -> eprintf "%s was stopped by signal %d\n" !diff_cmd n
+    end
+  | _ ->
+    eprintf "dircmp diff expects exactly two arguments, \n
+              please do not mess up with that.\n"
+  end
+
 
 let () =
   let usage = "usage: dircmp {version,help,digest,diff} [OPTIONS]" in
@@ -162,8 +214,8 @@ let () =
       Arg.current := 1;
       digest ()
     | "diff" ->
-      eprintf "NOT IMPLEMENTED\n";
-      exit 0
+      Arg.current := 1;
+      diff ()
     | "help" | "-help" | "-h" | "--help" ->
       eprintf "%s\n" usage;
       exit 0
