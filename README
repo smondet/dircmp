@@ -2,7 +2,7 @@ Directory Comparison
 
 
 ** Build:
-  ocamlfind ocamlc -package unix -linkpkg dircmp.ml -o dircmp
+ocamlfind ocamlopt -package unix,cryptokit,core -thread -linkpkg dircmp.ml -g -o nudircmp
 
 ** Run:
 

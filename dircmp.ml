@@ -2,6 +2,26 @@ open Printf
 
 let version = "1"
 
+let buffer_size = ref 1000
+let buffer = ref ""
+let md5_file file =
+  let open Core.Core_unix in
+  let h = Cryptokit.Hash.md5 () in
+  let bufsize = !buffer_size in
+  let buf = !buffer in
+  let i = openfile ~mode:[O_RDONLY] file in
+  begin try
+    let read = ref (-1) in
+    while !read <> 0 do
+      read := read_assume_fd_is_nonblocking i buf ~pos:0 ~len:bufsize;
+      h#add_substring buf 0 !read;
+(*eprintf "read: %d\n%!" !read;*)
+    done;
+    h#result
+  with e -> close i; eprintf "ERROR: %s" (Printexc.to_string e); "ERROR"
+  end
+   
+
 module File_tree = struct
 
   type file_tree_item =
@@ -29,7 +49,7 @@ module File_tree = struct
         let real_path = (root ^ "/" ^ path) in
         let lstat = ULF.lstat real_path in
         match lstat.ULF.st_kind with
-        | Unix.S_REG -> do_actions (File (path, Digest.file real_path))
+        | Unix.S_REG -> do_actions (File (path, md5_file real_path))
         | Unix.S_LNK -> 
           do_actions (Link (path,
                             if read_links then 
@@ -130,6 +150,7 @@ let digest () =
     ( "-do-not-read-links",
       Arg.Clear read_links,
       "\n\tDo not track where the symbolic links point to.");
+    ( "-buffer-size", Arg.Set_int buffer_size, "<int>\n\tSet the size of the read buffer");
     ( "-version",
       Arg.Unit (fun () -> printf "%s\n" version),
       (sprintf "\n\tPrint version number on stdout (i.e. print %S)." version))
@@ -152,6 +173,7 @@ let digest () =
     ) !to_do in
   List.iter (function
     | `parse path ->
+      buffer := String.make !buffer_size 'B';
       File_tree.descend ~forget_specials:!forget_specials 
         ~read_links:!read_links ~actions path
     | `load path ->
