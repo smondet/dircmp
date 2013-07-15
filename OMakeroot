@@ -1,0 +1,140 @@
+open build/OCaml
+
+.PHONY: lib app doc \
+        install install_lib install_app install_doc \
+        uninstall uninstall_lib uninstall_app \
+        clean distclean
+
+PROJECT_NAME = dircmp
+VERSION = 1.1-dev
+
+USE_OCAMLFIND = true
+if $(not $(OCAMLFIND_EXISTS))
+   eprintln(Required package ocamlfind not found.)
+   exit 1
+
+BUILD_DIR = _build
+
+.INCLUDE: configure.om
+  if $(not $(file-exists configure.om))
+    echo "Generating default configure.om file." >> $(BUILD_SUMMARY)
+    echo "INSTALL_PREFIX=$(BUILD_DIR)" > configure.om
+
+INSTALL_BINDIR = $(INSTALL_PREFIX)/bin
+INSTALL_DOCDIR = $(INSTALL_PREFIX)/doc
+
+DefineCommandVars()
+
+NATIVE_ENABLED = $(OCAMLOPT_EXISTS)
+BYTE_ENABLED = $(OCAMLC_EXISTS)
+
+OCAMLFLAGS = -bin-annot -annot -warn-error P -thread
+OCAMLCFLAGS =
+OCAMLOPTFLAGS =
+OCAML_LINK_FLAGS +=
+OCAML_BYTE_LINK_FLAGS =
+OCAML_NATIVE_LINK_FLAGS =
+OCAMLFINDFLAGS =
+
+LIB_MODULES[] =
+  dircmp_internal_pervasives
+  dircmp
+  dircmp_about
+  dircmp_file_tree
+
+LIB_DESCRIPTION = Compute and compare statistics on large directories.
+LIB_SOURCES = $(add-wrapper src/lib, .ml, $(LIB_MODULES))
+DEPENDENCIES = unix
+PACKAGES = $(DEPENDENCIES)
+
+install: install_lib install_app
+uninstall: uninstall_lib uninstall_app
+
+clean:
+  rm -rf _build
+
+distclean: clean
+  rm -rf OMakeroot.omc .omakedb .omakedb.lock configure.omc
+
+LIB_DIR = lib
+APP_DIR = app
+LIB_NAME = $(PROJECT_NAME)
+APP_NAME = $(PROJECT_NAME)
+
+.SUBDIRS: .
+  mkdir -p $(BUILD_DIR)/$(LIB_DIR)
+  mkdir -p $(BUILD_DIR)/$(APP_DIR)
+  vmount(-l, src/, $(BUILD_DIR)/)
+
+  ################################################################################
+  # Library
+  .SUBDIRS: $(BUILD_DIR)/$(LIB_DIR)
+
+    dircmp_about.ml: :value: $(VERSION)
+      echo '(** Version of the library. Currently $(VERSION). *)' > $@
+      echo 'let version = "$(VERSION)"' >> $@
+
+    META:
+      echo "description = \"$(LIB_DESCRIPTION)\"" > $@
+      echo "version = \"$(VERSION)\"" >> $@
+      echo "archive(byte) = \"$(LIB_NAME).cma\"" >> $@
+      echo "archive(native) = \"$(LIB_NAME).cmxa\"" >> $@
+      echo "requires = \"$(DEPENDENCIES)\"" >> $@
+
+    lib: $(OCamlLibrary $(LIB_NAME), $(LIB_MODULES))
+    .DEFAULT: lib
+
+    install_library: $(LIB_NAME).cma $(LIB_NAME).cmxa META uninstall_library
+      ocamlfind install $(LIB_NAME) META \
+        *.cm[iox] *.o $(LIB_NAME).cma $(LIB_NAME).cmxa *.a
+
+    uninstall_library:
+      ocamlfind remove $(LIB_NAME)
+
+
+  ################################################################################
+  # Command Line App
+  .SUBDIRS: $(BUILD_DIR)/$(APP_DIR)
+    OCAML_LIBS = ../$(LIB_DIR)/$(LIB_NAME)
+    OCAMLINCLUDES += $(dir ../$(LIB_DIR))
+    OCAMLPACKS[] = $(PACKAGES)
+
+    app: $(OCamlProgram $(APP_NAME), main)
+    .DEFAULT: app
+
+    install_app: $(APP_NAME)
+      echo "Installing $< in $(INSTALL_BINDIR)" >> $(BUILD_SUMMARY) 
+      mkdir -p $(INSTALL_BINDIR)
+      install $< $(INSTALL_BINDIR)
+
+    uninstall_app:
+      echo "Removing $(APP_NAME) from $(BINDIR)" >> $(BUILD_SUMMARY)
+      rm -f $(INSTALL_BINDIR)/$(APP_NAME)
+
+
+################################################################################
+# API Documentation
+API_DIR = api
+TITLE = "Dircmp API"
+
+$(BUILD_DIR)/$(API_DIR)/index.html: lib
+  ocamlfind ocamldoc \
+    $(OCAMLFINDFLAGS) \
+    -package $(concat \,, $(PACKAGES)) \
+    -charset UTF-8 \
+    -d $(BUILD_DIR)/$(API_DIR) \
+    -t $(TITLE) \
+    -keep-code \
+    -colorize-code \
+    -sort \
+    -I $(BUILD_DIR)/$(LIB_DIR) \
+    $(BUILD_DIR)/$(LIB_DIR)/*.ml
+
+doc: $(BUILD_DIR)/$(API_DIR)/index.html
+
+install_doc: doc
+  X = $(INSTALL_DOCDIR)/$(PROJECT_NAME)
+  echo "Installing documentation in $(X)" >> $(BUILD_SUMMARY)
+  rm -rf $(X)
+  mkdir -p $(X)
+  cp -Rp $(BUILD_DIR)/$(API_DIR) $(X)/
