@@ -20,10 +20,10 @@ BUILD_DIR = _build
     echo "Generating default configure.om file." >> $(BUILD_SUMMARY)
     echo "PREFIX=$(BUILD_DIR)" > configure.om
 
+DefineCommandVars()
+
 BINDIR = $(PREFIX)/bin
 DOCDIR = $(PREFIX)/doc
-
-DefineCommandVars()
 
 NATIVE_ENABLED = $(OCAMLOPT_EXISTS)
 BYTE_ENABLED = $(OCAMLC_EXISTS)
