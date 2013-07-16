@@ -84,11 +84,11 @@ APP_NAME = $(PROJECT_NAME)
     lib: $(OCamlLibrary $(LIB_NAME), $(LIB_MODULES))
     .DEFAULT: lib
 
-    install_library: $(LIB_NAME).cma $(LIB_NAME).cmxa META uninstall_library
+    install_lib: $(LIB_NAME).cma $(LIB_NAME).cmxa META uninstall_lib
       ocamlfind install $(LIB_NAME) META \
         *.cm[iox] *.o $(LIB_NAME).cma $(LIB_NAME).cmxa *.a
 
-    uninstall_library:
+    uninstall_lib:
       ocamlfind remove $(LIB_NAME)
 
 
