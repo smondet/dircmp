@@ -14,25 +14,24 @@ type file_tree_item =
 
 let descend ?(forget_specials=false) ?(read_links=true) ~actions root =
   let ls dir =
-    let sort a = Array.fast_sort String.compare a; a in
+    let sort a = Array.sort ~cmp:String.compare a; a in
     let dir_read = Sys.readdir (root ^ "/" ^ dir) in
     (Array.map (fun f -> dir ^ "/" ^ f) (sort dir_read)) in
 
-  let do_actions o = List.iter (fun f -> f o) actions in
+  let do_actions o = List.iter ~f:(fun f -> f o) actions in
   let do_special o = if forget_specials then () else (do_actions o) in
   let rec explore path =
     try
-      let module ULF = Unix.LargeFile in
       let real_path = (root ^ "/" ^ path) in
-      let lstat = ULF.lstat real_path in
-      match lstat.ULF.st_kind with
+      let lstat = Unix.lstat real_path in
+      match lstat.Unix.st_kind with
       | Unix.S_REG -> do_actions (File (path, Digest.file real_path))
       | Unix.S_LNK ->
         do_actions (Link (path,
                           if read_links then
                             Some (Unix.readlink real_path) else None))
       | Unix.S_DIR ->
-        (do_actions (Dir path); (Array.iter explore (ls path)))
+        (do_actions (Dir path); (Array.iter ~f:explore (ls path)))
       | Unix.S_CHR  -> do_special (Char path)
       | Unix.S_BLK  -> do_special (Block path)
       | Unix.S_FIFO -> do_special (Pipe path)
@@ -73,11 +72,11 @@ let file_saver path =
   let o = open_out path in
   output_string o _file_tree_magic_string;
   let action = fun (item: file_tree_item) -> Marshal.to_channel o item [] in
-  let at_exit = fun () -> close_out o in
+  let at_exit = fun () -> Out_channel.close o in
   (action, at_exit)
 
 let load ~actions file =
-  let do_actions o = List.iter (fun f -> f o) actions in
+  let do_actions o = List.iter ~f:(fun f -> f o) actions in
   let i = open_in file in
   let magick_length = (String.length _file_tree_magic_string) in
   let s = String.make magick_length '\000' in
@@ -92,4 +91,4 @@ let load ~actions file =
     ) else (
       failwith (sprintf "The header of the file %S is wrong: %S." file s)
     )
-  with e -> close_in i; raise e
+  with e -> In_channel.close i; raise e

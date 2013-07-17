@@ -46,11 +46,11 @@ let digest : Command.t = Command.basic
     (if do_not_read_links then read_links := false);
 
     let actions =
-      List.map (function
+      List.map ~f:(function
       | `print -> File_tree.print stdout
       | `print_to path ->
         let out = open_out path in
-        at_exit (fun () -> close_out out);
+        at_exit (fun () -> Out_channel.close out);
         File_tree.print out
       | `save path ->
         let action, to_do_at_exit = File_tree.file_saver path in
@@ -59,7 +59,7 @@ let digest : Command.t = Command.basic
       ) !to_do
     in
 
-    List.iter (function
+    List.iter ~f:(function
     | `parse path ->
       File_tree.descend ~forget_specials:!forget_specials
         ~read_links:!read_links ~actions path
@@ -80,11 +80,11 @@ let diff : Command.t = Command.basic
   )
   (fun tmp_dir diff_cmd left right () ->
     let transform_dircmp f =
-      let tmp = Filename.temp_file ~temp_dir:tmp_dir "dircmpdiff" ".txt" in
+      let tmp = Filename.temp_file ~in_dir:tmp_dir "dircmpdiff" ".txt" in
       let out = open_out tmp in
       let actions = [ File_tree.print out ] in
       File_tree.load ~actions f;
-      close_out out;
+      Out_channel.close out;
       tmp
     in
 
@@ -99,12 +99,11 @@ let diff : Command.t = Command.basic
     let txt_right = text_version right in
     let open Unix in
     begin match system (sprintf "%s %s %s" diff_cmd txt_left txt_right) with
-    | WEXITED 127 ->
+    | Result.Ok () -> ()
+    | Error (`Exit_non_zero 127) ->
       eprintf "The result WEXITED 127 indicates that the shell couldn't be executed."
-    | WEXITED 0 -> ()
-    | WEXITED n -> eprintf "%s returned %d\n" diff_cmd n
-    | WSIGNALED n -> eprintf "%s was killed by signal %d\n" diff_cmd n
-    | WSTOPPED n -> eprintf "%s was stopped by signal %d\n" diff_cmd n
+    | Error (`Exit_non_zero n) -> eprintf "%s returned %d\n" diff_cmd n
+    | Error (`Signal s) -> eprintf "%s was killed by signal %s\n" diff_cmd (Signal.to_string s)
     end
   )
 
