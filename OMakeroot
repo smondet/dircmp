@@ -89,6 +89,7 @@ OCAML_LINK_FLAGS +=
 OCAML_BYTE_LINK_FLAGS =
 OCAML_NATIVE_LINK_FLAGS =
 OCAMLFINDFLAGS =
+OCAMLPACKS[] = $(PACKAGES)
 
 .SUBDIRS: .
   mkdir -p _build/src/lib
@@ -127,7 +128,6 @@ OCAMLFINDFLAGS =
   .SUBDIRS: _build/src/app
     OCAML_LIBS = ../lib/$(LIB_NAME)
     OCAMLINCLUDES += $(dir ../lib)
-    OCAMLPACKS[] = $(PACKAGES)
 
     app: $(OCamlProgram $(APP_NAME), main)
     .DEFAULT: app
