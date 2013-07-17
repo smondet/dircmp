@@ -104,6 +104,7 @@ OCAMLPACKS[] = $(PACKAGES)
     dircmp_about.ml: :value: $(VERSION)
       echo '(** Version of the library. Currently $(VERSION). *)' > $@
       echo 'let version = "$(VERSION)"' >> $@
+      echo 'let description = "$(LIB_DESCRIPTION)"' >> $@
 
     META:
       echo "description = \"$(LIB_DESCRIPTION)\"" > $@
