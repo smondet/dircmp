@@ -14,7 +14,7 @@ clean:
   rm -rf _build
 
 distclean: clean
-  rm -rf OMakeroot.omc .omakedb .omakedb.lock configure.omc
+  rm -rf OMakeroot.omc .omakedb .omakedb.lock configure.omc default-configure.om
 
 
 ################################################################################
@@ -39,24 +39,39 @@ LIB_SOURCES = $(add-wrapper src/lib, .ml, $(LIB_MODULES))
 
 
 ################################################################################
-# Directory Names
+# Directory and File Names
 BUILD_DIR = _build
+CONFIG_FILE = configure.om
+DEFAULT_PREFIX=$(BUILD_DIR)
+DEFAULT_BIN_DIR = $(DEFAULT_PREFIX)/bin
+DEFAULT_DOC_DIR = $(DEFAULT_PREFIX)/doc
 
-.INCLUDE: configure.om
-  if $(not $(file-exists configure.om))
-    echo "Generating default configure.om file." >> $(BUILD_SUMMARY)
-    echo "PREFIX=$(BUILD_DIR)" > configure.om
+default-configure.om:
+  echo "Generating $@. Rename to $(CONFIG_FILE) to use." >> $(BUILD_SUMMARY)
+  echo "PREFIX=$(BUILD_DIR)" > $@
 
-DefineCommandVars() # executing here allows overriding PREFIX
+if $(file-exists $(CONFIG_FILE))
+  include $(CONFIG_FILE)
+  export
 
-BINDIR = $(PREFIX)/bin
-DOCDIR = $(PREFIX)/doc
+DefineCommandVars()
 
-DefineCommandVars() # executing here allows overriding BINDIR and DOCDIR
+if $(not $(defined PREFIX))
+  PREFIX = $(DEFAULT_PREFIX)
+  export
+
+if $(not $(defined BIN_DIR))
+  BIN_DIR = $(PREFIX)/bin
+  export
+
+if $(not $(defined DOC_DIR))
+  DOC_DIR = $(PREFIX)/doc
+  export
 
 LIB_DIR = lib
 APP_DIR = app
 API_DIR = api
+
 
 ################################################################################
 # Build Parameters
