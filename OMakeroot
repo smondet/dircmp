@@ -112,29 +112,33 @@ APP_NAME = $(PROJECT_NAME)
       rm -f $(BINDIR)/$(APP_NAME)
 
 
-################################################################################
-# API Documentation
-API_DIR = api
-TITLE = "Dircmp API"
+  ################################################################################
+  # API Documentation
+  .SUBDIRS: $(BUILD_DIR)
+    API_DIR = api
+    TITLE = "Dircmp API"
 
-$(BUILD_DIR)/$(API_DIR)/index.html: lib
-  ocamlfind ocamldoc \
-    $(OCAMLFINDFLAGS) \
-    -package $(concat \,, $(PACKAGES)) \
-    -charset UTF-8 \
-    -d $(BUILD_DIR)/$(API_DIR) \
-    -t $(TITLE) \
-    -keep-code \
-    -colorize-code \
-    -sort \
-    -I $(BUILD_DIR)/$(LIB_DIR) \
-    $(BUILD_DIR)/$(LIB_DIR)/*.ml
+    $(API_DIR)/index.html: lib
+      rm -rf $(API_DIR)
+      mkdir $(API_DIR)
+      ocamlfind ocamldoc \
+        $(OCAMLFINDFLAGS) \
+        -package $(concat \,, $(PACKAGES)) \
+        -charset UTF-8 \
+        -d $(API_DIR) \
+        -t $(TITLE) \
+        -keep-code \
+        -colorize-code \
+        -sort \
+        -html \
+        -I $(LIB_DIR) \
+        $(LIB_DIR)/*.ml
 
-doc: $(BUILD_DIR)/$(API_DIR)/index.html
+    doc: $(API_DIR)/index.html
 
-install_doc: doc
-  X = $(DOCDIR)/$(PROJECT_NAME)
-  echo "Installing documentation in $(X)" >> $(BUILD_SUMMARY)
-  rm -rf $(X)
-  mkdir -p $(X)
-  cp -Rp $(BUILD_DIR)/$(API_DIR) $(X)/
+    install_doc: doc
+      X = $(DOCDIR)/$(PROJECT_NAME)
+      echo "Installing documentation in $(X)" >> $(BUILD_SUMMARY)
+      rm -rf $(X)
+      mkdir -p $(X)
+      cp -Rp $(API_DIR) $(X)/
