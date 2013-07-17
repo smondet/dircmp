@@ -27,7 +27,7 @@ APP_NAME = $(PROJECT_NAME)
 LIB_DESCRIPTION = Compute and compare statistics on large directories.
 API_DOC_TITLE = "Dircmp API"
 
-DEPENDENCIES = unix
+DEPENDENCIES = unix core
 PACKAGES = $(DEPENDENCIES)
 
 LIB_MODULES[] =
