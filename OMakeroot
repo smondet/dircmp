@@ -3,7 +3,8 @@ open build/OCaml
 .PHONY: lib app doc \
         install install_lib install_app install_doc \
         uninstall uninstall_lib uninstall_app \
-        clean distclean
+        clean distclean \
+        print-paths
 
 ################################################################################
 # Primary Commands
@@ -40,15 +41,12 @@ LIB_SOURCES = $(add-wrapper src/lib, .ml, $(LIB_MODULES))
 
 ################################################################################
 # Directory and File Names
-BUILD_DIR = _build
 CONFIG_FILE = configure.om
-DEFAULT_PREFIX=$(BUILD_DIR)
-DEFAULT_BIN_DIR = $(DEFAULT_PREFIX)/bin
-DEFAULT_DOC_DIR = $(DEFAULT_PREFIX)/doc
+DEFAULT_PREFIX=_build/usr
 
 default-configure.om:
   echo "Generating $@. Rename to $(CONFIG_FILE) to use." >> $(BUILD_SUMMARY)
-  echo "PREFIX=$(BUILD_DIR)" > $@
+  echo "PREFIX=$(DEFAULT_PREFIX)" > $@
 
 if $(file-exists $(CONFIG_FILE))
   include $(CONFIG_FILE)
@@ -68,9 +66,10 @@ if $(not $(defined DOC_DIR))
   DOC_DIR = $(PREFIX)/doc
   export
 
-LIB_DIR = lib
-APP_DIR = app
-API_DIR = api
+print-paths:
+  echo "PREFIX = $(PREFIX)"
+  echo "BIN_DIR = $(BIN_DIR)"
+  echo "DOC_DIR = $(DOC_DIR)"
 
 
 ################################################################################
@@ -92,13 +91,14 @@ OCAML_NATIVE_LINK_FLAGS =
 OCAMLFINDFLAGS =
 
 .SUBDIRS: .
-  mkdir -p $(BUILD_DIR)/$(LIB_DIR)
-  mkdir -p $(BUILD_DIR)/$(APP_DIR)
-  vmount(-l, src/, $(BUILD_DIR)/)
+  mkdir -p _build/src/lib
+  mkdir -p _build/src/app
+  mkdir -p _build/doc
+  vmount(-l, src/, _build/src/)
 
   ################################################################################
   # Library
-  .SUBDIRS: $(BUILD_DIR)/$(LIB_DIR)
+  .SUBDIRS: _build/src/lib
 
     dircmp_about.ml: :value: $(VERSION)
       echo '(** Version of the library. Currently $(VERSION). *)' > $@
@@ -124,48 +124,48 @@ OCAMLFINDFLAGS =
 
   ################################################################################
   # Command Line App
-  .SUBDIRS: $(BUILD_DIR)/$(APP_DIR)
-    OCAML_LIBS = ../$(LIB_DIR)/$(LIB_NAME)
-    OCAMLINCLUDES += $(dir ../$(LIB_DIR))
+  .SUBDIRS: _build/src/app
+    OCAML_LIBS = ../lib/$(LIB_NAME)
+    OCAMLINCLUDES += $(dir ../lib)
     OCAMLPACKS[] = $(PACKAGES)
 
     app: $(OCamlProgram $(APP_NAME), main)
     .DEFAULT: app
 
-    install_app: $(APP_NAME)
-      echo "Installing $< in $(BINDIR)" >> $(BUILD_SUMMARY) 
-      mkdir -p $(BINDIR)
-      install $< $(BINDIR)
+  install_app: app
+    echo "Installing $(APP_NAME) in $(BIN_DIR)" >> $(BUILD_SUMMARY) 
+    mkdir -p $(BIN_DIR)
+    install _build/src/app/$(APP_NAME) $(BIN_DIR)
 
-    uninstall_app:
-      echo "Removing $(APP_NAME) from $(BINDIR)" >> $(BUILD_SUMMARY)
-      rm -f $(BINDIR)/$(APP_NAME)
+  uninstall_app:
+    echo "Removing $(APP_NAME) from $(BIN_DIR)" >> $(BUILD_SUMMARY)
+    rm -f $(BIN_DIR)/$(APP_NAME)
 
 
   ################################################################################
   # API Documentation
-  .SUBDIRS: $(BUILD_DIR)
-    $(API_DIR)/index.html: lib
-      rm -rf $(API_DIR)
-      mkdir $(API_DIR)
+  .SUBDIRS: _build/doc
+    api/index.html: lib
+      rm -rf api
+      mkdir api
       ocamlfind ocamldoc \
         $(OCAMLFINDFLAGS) \
         -package $(concat \,, $(PACKAGES)) \
         -charset UTF-8 \
-        -d $(API_DIR) \
+        -d api \
         -t $(API_DOC_TITLE) \
         -keep-code \
         -colorize-code \
         -sort \
         -html \
-        -I $(LIB_DIR) \
-        $(LIB_DIR)/*.ml
+        -I ../src/lib \
+        ../src/lib/*.ml
 
-    doc: $(API_DIR)/index.html
+    doc: api/index.html
 
-    install_doc: doc
-      X = $(DOCDIR)/$(PROJECT_NAME)
-      echo "Installing documentation in $(X)" >> $(BUILD_SUMMARY)
-      rm -rf $(X)
-      mkdir -p $(X)
-      cp -Rp $(API_DIR) $(X)/
+  X = $(DOC_DIR)/$(PROJECT_NAME)
+  install_doc: doc
+    echo "Installing documentation in $(X)" >> $(BUILD_SUMMARY)
+    rm -rf $(X)
+    mkdir -p $(X)
+    cp -r _build/doc/api $(X)/
