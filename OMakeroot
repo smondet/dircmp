@@ -5,14 +5,41 @@ open build/OCaml
         uninstall uninstall_lib uninstall_app \
         clean distclean
 
+################################################################################
+# Primary Commands
+install: install_lib install_app
+uninstall: uninstall_lib uninstall_app
+
+clean:
+  rm -rf _build
+
+distclean: clean
+  rm -rf OMakeroot.omc .omakedb .omakedb.lock configure.omc
+
+
+################################################################################
+# General Project Information
 PROJECT_NAME = dircmp
 VERSION = 1.1-dev
+LIB_NAME = $(PROJECT_NAME)
+APP_NAME = $(PROJECT_NAME)
+LIB_DESCRIPTION = Compute and compare statistics on large directories.
+API_DOC_TITLE = "Dircmp API"
 
-USE_OCAMLFIND = true
-if $(not $(OCAMLFIND_EXISTS))
-   eprintln(Required package ocamlfind not found.)
-   exit 1
+DEPENDENCIES = unix
+PACKAGES = $(DEPENDENCIES)
 
+LIB_MODULES[] =
+  dircmp_internal_pervasives
+  dircmp
+  dircmp_about
+  dircmp_file_tree
+
+LIB_SOURCES = $(add-wrapper src/lib, .ml, $(LIB_MODULES))
+
+
+################################################################################
+# Directory Names
 BUILD_DIR = _build
 
 .INCLUDE: configure.om
@@ -20,10 +47,23 @@ BUILD_DIR = _build
     echo "Generating default configure.om file." >> $(BUILD_SUMMARY)
     echo "PREFIX=$(BUILD_DIR)" > configure.om
 
-DefineCommandVars()
+DefineCommandVars() # executing here allows overriding PREFIX
 
 BINDIR = $(PREFIX)/bin
 DOCDIR = $(PREFIX)/doc
+
+DefineCommandVars() # executing here allows overriding BINDIR and DOCDIR
+
+LIB_DIR = lib
+APP_DIR = app
+API_DIR = api
+
+################################################################################
+# Build Parameters
+USE_OCAMLFIND = true
+if $(not $(OCAMLFIND_EXISTS))
+   eprintln(Required package ocamlfind not found.)
+   exit 1
 
 NATIVE_ENABLED = $(OCAMLOPT_EXISTS)
 BYTE_ENABLED = $(OCAMLC_EXISTS)
@@ -35,31 +75,6 @@ OCAML_LINK_FLAGS +=
 OCAML_BYTE_LINK_FLAGS =
 OCAML_NATIVE_LINK_FLAGS =
 OCAMLFINDFLAGS =
-
-LIB_MODULES[] =
-  dircmp_internal_pervasives
-  dircmp
-  dircmp_about
-  dircmp_file_tree
-
-LIB_DESCRIPTION = Compute and compare statistics on large directories.
-LIB_SOURCES = $(add-wrapper src/lib, .ml, $(LIB_MODULES))
-DEPENDENCIES = unix
-PACKAGES = $(DEPENDENCIES)
-
-install: install_lib install_app
-uninstall: uninstall_lib uninstall_app
-
-clean:
-  rm -rf _build
-
-distclean: clean
-  rm -rf OMakeroot.omc .omakedb .omakedb.lock configure.omc
-
-LIB_DIR = lib
-APP_DIR = app
-LIB_NAME = $(PROJECT_NAME)
-APP_NAME = $(PROJECT_NAME)
 
 .SUBDIRS: .
   mkdir -p $(BUILD_DIR)/$(LIB_DIR)
@@ -115,9 +130,6 @@ APP_NAME = $(PROJECT_NAME)
   ################################################################################
   # API Documentation
   .SUBDIRS: $(BUILD_DIR)
-    API_DIR = api
-    TITLE = "Dircmp API"
-
     $(API_DIR)/index.html: lib
       rm -rf $(API_DIR)
       mkdir $(API_DIR)
@@ -126,7 +138,7 @@ APP_NAME = $(PROJECT_NAME)
         -package $(concat \,, $(PACKAGES)) \
         -charset UTF-8 \
         -d $(API_DIR) \
-        -t $(TITLE) \
+        -t $(API_DOC_TITLE) \
         -keep-code \
         -colorize-code \
         -sort \
