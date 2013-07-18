@@ -165,9 +165,10 @@ OCAMLPACKS[] = $(PACKAGES)
 
     doc: api/index.html
 
-  X = $(DOC_DIR)/$(PROJECT_NAME)
   install_doc: doc
-    echo "Installing documentation in $(X)" >> $(BUILD_SUMMARY)
-    rm -rf $(X)
-    mkdir -p $(X)
-    cp -r _build/doc/api $(X)/
+    section
+      X = $(DOC_DIR)/$(PROJECT_NAME)
+      echo "Installing documentation in $(X)" >> $(BUILD_SUMMARY)
+      rm -rf $(X)
+      mkdir -p $(X)
+      cp -r _build/doc/api $(X)/
