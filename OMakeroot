@@ -115,7 +115,7 @@ OCAMLPACKS[] = $(PACKAGES)
       echo "requires = \"$(DEPENDENCIES)\"" >> $@
 
     lib: $(OCamlLibrary $(LIB_NAME), $(LIB_MODULES))
-    .DEFAULT: lib
+    .DEFAULT: lib META
 
     install_lib: $(LIB_NAME).cma $(LIB_NAME).cmxa META uninstall_lib
       ocamlfind install $(LIB_NAME) META \
