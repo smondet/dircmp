@@ -16,7 +16,7 @@ clean:
   rm -rf _build
 
 distclean: clean
-  rm -rf OMakeroot.omc .omakedb .omakedb.lock configure.omc default-configure.om
+  rm -rf OMakeroot.omc .omakedb .omakedb.lock configure.omc default-configure.om dircmp.install
 
 
 ################################################################################
@@ -172,3 +172,25 @@ OCAMLPACKS[] = $(PACKAGES)
       rm -rf $(X)
       mkdir -p $(X)
       cp -r _build/doc/api $(X)/
+
+
+################################################################################
+# OPAM Support
+OPAM_PKG_NAME=$(PROJECT_NAME)
+
+$(OPAM_PKG_NAME).install:
+  section
+    SUFFIXES[] = annot cmi cmo cmt cmx o
+    FILES[] =
+      $(foreach $(fun file => $(foreach $(fun suffix => $(file).$(suffix)), annot cmi cmo cmt cmx o)), $(LIB_MODULES))
+      $(foreach $(fun suffix => $(LIB_NAME).$(suffix)), a cma cmxa)
+    FOO = $(FILES) META
+    echo $"lib: [" > $@
+    foreach(file, $(FOO))
+      echo "  "\"_build/src/lib/$(file)\" >> $@
+    echo $"]" >> $@
+    echo "" >> $@
+    echo $"bin: [" >> $@
+    echo "  "\"?_build/src/app/dircmp.run\" {\"dircmp\"} >> $@
+    echo "  "\"?_build/src/app/dircmp.opt\" {\"dircmp\"} >> $@
+    echo $"]" >> $@
