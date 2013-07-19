@@ -32,13 +32,10 @@ DEPENDENCIES = unix core
 PACKAGES = $(DEPENDENCIES)
 
 LIB_MODULES[] =
-  dircmp_internal_pervasives
-  dircmp
+  $(removesuffix $(basename $(ls src/lib/*.ml)))
   dircmp_about
-  dircmp_file_tree
 
 LIB_SOURCES = $(add-wrapper src/lib, .ml, $(LIB_MODULES))
-
 
 ################################################################################
 # Directory and File Names
