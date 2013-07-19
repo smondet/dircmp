@@ -21,10 +21,10 @@ distclean: clean
 
 ################################################################################
 # General Project Information
-PROJECT_NAME = dircmp
+PROJECT = dircmp
 VERSION = 1.1-dev
-LIB_NAME = $(PROJECT_NAME)
-APP_NAME = $(PROJECT_NAME)
+LIB_NAME = $(PROJECT)
+APP_NAME = $(PROJECT)
 LIB_DESCRIPTION = Compute and compare statistics on large directories.
 API_DOC_TITLE = "Dircmp API"
 
@@ -164,7 +164,7 @@ OCAMLPACKS[] = $(PACKAGES)
 
   install_doc: doc
     section
-      X = $(DOC_DIR)/$(PROJECT_NAME)
+      X = $(DOC_DIR)/$(PROJECT)
       echo "Installing documentation in $(X)" >> $(BUILD_SUMMARY)
       rm -rf $(X)
       mkdir -p $(X)
@@ -173,7 +173,7 @@ OCAMLPACKS[] = $(PACKAGES)
 
 ################################################################################
 # OPAM Support
-OPAM_PKG_NAME=$(PROJECT_NAME)
+OPAM_PKG_NAME=$(PROJECT)
 
 $(OPAM_PKG_NAME).install:
   section
